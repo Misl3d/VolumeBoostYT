@@ -438,6 +438,12 @@ static CGPoint initialTouchPoint;
     %end // end group YouTubeSettings
 
     %ctor {
+  // Never inject into SpringBoard (Home Screen)
+  NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
+  if ([bundleID isEqualToString:@"com.apple.springboard"]) {
+    return;
+  }
+
   // Check if YouTube classes exist instead of relying on Bundle ID,
   // because sideloaded apps (like LiveContainer) often change their Bundle IDs.
   if (NSClassFromString(@"YTSettingsGroupData")) {
