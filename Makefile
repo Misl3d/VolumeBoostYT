@@ -8,7 +8,7 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = YTGestures
 
-YTGestures_FILES = Tweak.x YTVolumeHUD.m
+YTGestures_FILES = Tweak.x
 YTGestures_CFLAGS = -fobjc-arc
 YTGestures_FRAMEWORKS = UIKit MediaPlayer AVFoundation
 YTGestures_LOGOSFLAGS = -c generator=internal
