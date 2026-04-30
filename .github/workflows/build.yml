@@ -3,8 +3,9 @@ name: Build Tweak
 on:
   push:
     branches: [ "main" ]
-    tags: [ "v*" ]  
-  workflow_dispatch: 
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -58,14 +59,13 @@ jobs:
         run: |
           VERSION=$(grep '^Version:' control | awk '{print $2}')
           echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT4
-          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
       - name: Publish to GitHub Releases
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: YTGestures ${{ github.ref_name }}
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: YTGestures ${{ steps.tag.outputs.version }}
           files: output/*
           make_latest: true
           fail_on_unmatched_files: false
