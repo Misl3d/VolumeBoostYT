@@ -7,7 +7,7 @@ on:
         description: 'Create a GitHub Release?'
         required: true
         type: boolean
-        default: true
+        default: false
 
 jobs:
   build:
