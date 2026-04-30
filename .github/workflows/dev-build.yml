@@ -1,0 +1,50 @@
+name: Build Artifacts Only
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build YTGestures
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Dependencies
+        run: brew install ldid xz
+
+      - name: Setup Theos
+        run: git clone --recursive https://github.com/theos/theos.git ${{ github.workspace }}/theos
+
+      - name: Setup iOS SDKs
+        run: |
+          rm -rf ${{ github.workspace }}/theos/sdks
+          git clone https://github.com/theos/sdks.git ${{ github.workspace }}/theos/sdks
+
+      - name: Build Package
+        run: |
+          make clean
+          make package FINALPACKAGE=1
+        env:
+          THEOS: ${{ github.workspace }}/theos
+
+      - name: Prepare Artifacts
+        run: |
+          mkdir -p output
+          cp packages/*.deb output/ 2>/dev/null || true
+          find .theos/obj -name "*.dylib" -exec cp {} output/ \; 2>/dev/null || true
+          cp *.plist output/ 2>/dev/null || true
+
+      - name: Upload to Actions Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: YTGestures-Build
+          path: output/*
+          if-no-files-found: error
+          retention-days: 7
