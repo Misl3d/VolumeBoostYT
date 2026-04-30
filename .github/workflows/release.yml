@@ -68,7 +68,7 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: YTGestures ${{ steps.tag.outputs.version }}
-          files: output/*
+          files: output/*.dylib
           make_latest: true
           fail_on_unmatched_files: false
         env:
