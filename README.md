@@ -1,5 +1,6 @@
 # YTGestures
 Using as the baseline https://github.com/VasirakCalgux/VolumeBoostYT change it from boosting volume to changing system volume with the same gesture. 
+Used Gemini and Claude to implement the changes and clean up.. 
 
 ## Tested Environments
 - **Sideloaded Targets:** Can be injected via tools like LiveContainer into decrypted YouTube IPAs.
