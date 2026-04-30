@@ -42,15 +42,16 @@
 @end
 
 @interface YTSettingsSectionItemManager : NSObject
-- (void)updateVolumeBoostYTSectionWithEntry:(id)entry;
+- (void)updateYTGesturesSectionWithEntry:(id)entry;
 @end
 
-static const NSInteger TweakSection = 'ndyt';
-static NSString *const kVolumeBoostYTEnabledKey = @"VolumeBoostYTEnabled";
+// Unique Section ID to avoid conflict with VolumeBoostYT ('ndyt')
+static const NSInteger YTGestureSection = 'ytgs'; 
+static NSString *const kYTGesturesEnabledKey = @"YTGesturesEnabled";
 
-static BOOL IsVolumeBoostYTEnabled() {
+static BOOL IsYTGesturesEnabled() {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    return [defaults objectForKey:kVolumeBoostYTEnabledKey] ? [defaults boolForKey:kVolumeBoostYTEnabledKey] : YES;
+    return [defaults objectForKey:kYTGesturesEnabledKey] ? [defaults boolForKey:kYTGesturesEnabledKey] : YES;
 }
 
 // -----------------------------------------------------
@@ -60,7 +61,6 @@ static BOOL IsVolumeBoostYTEnabled() {
 static UISlider *GetSystemVolumeSlider() {
     static UISlider *volumeSlider = nil;
     if (!volumeSlider) {
-        // Create a hidden MPVolumeView to access the system slider
         MPVolumeView *volumeView = [[MPVolumeView alloc] initWithFrame:CGRectZero];
         for (UIView *view in [volumeView subviews]) {
             if ([NSStringFromClass([view class]) isEqualToString:@"MPVolumeSlider"]) {
@@ -96,7 +96,7 @@ static CGPoint initialTouchPoint;
 
 %hook UIWindow
 - (void)sendEvent:(UIEvent *)event {
-    if (!IsVolumeBoostYTEnabled()) { %orig(event); return; }
+    if (!IsYTGesturesEnabled()) { %orig(event); return; }
 
     UITouch *touch = [[event allTouches] anyObject];
     CGPoint location = [touch locationInView:self];
@@ -128,7 +128,6 @@ static CGPoint initialTouchPoint;
 
             if (isTrackingVolumeGesture) {
                 CGFloat translationY = location.y - initialTouchPoint.y;
-                // Sensitivity: 300 points for a full 0% to 100% change
                 float deltaVolume = -translationY / 300.0f; 
                 SetSystemVolume(gestureStartVolume + deltaVolume);
                 return;
@@ -147,63 +146,53 @@ static CGPoint initialTouchPoint;
 }
 %end
 
-        // -----------------------------------------------------
-        // YouTube In-App Settings Integration
-        // -----------------------------------------------------
+// -----------------------------------------------------
+// YouTube In-App Settings Integration
+// -----------------------------------------------------
 
-        %group YouTubeSettings
+%group YouTubeSettings
 
-        %hook YTSettingsGroupData
+%hook YTSettingsGroupData
+- (NSArray<NSNumber *> *)orderedCategories {
+    if (self.type != 1) return %orig;
 
-    - (NSArray<NSNumber *> *)orderedCategories {
-  // Only inject into the main settings group (type 1)
-  if (self.type != 1)
-    return %orig;
+    if (class_getClassMethod(objc_getClass("YTSettingsGroupData"), @selector(tweaks))) {
+        return %orig;
+    }
 
-  // If another tweak (YouGroupSettings) handles grouping, let it do so
-  if (class_getClassMethod(objc_getClass("YTSettingsGroupData"),
-                           @selector(tweaks))) {
-    return %orig;
-  }
-
-  NSMutableArray *mutableCategories = %orig.mutableCopy;
-  if (mutableCategories) {
-    // Insert our tweak section near the top
-    [mutableCategories insertObject:@(TweakSection) atIndex:0];
-  }
-  return mutableCategories.copy ?: %orig;
+    NSMutableArray *mutableCategories = %orig.mutableCopy;
+    if (mutableCategories) {
+        [mutableCategories insertObject:@(YTGestureSection) atIndex:0];
+    }
+    return mutableCategories.copy ?: %orig;
 }
 
 + (NSMutableArray<NSNumber *> *)tweaks {
-  NSMutableArray<NSNumber *> *tweaks = %orig;
-  if (tweaks && ![tweaks containsObject:@(TweakSection)]) {
-    [tweaks addObject:@(TweakSection)];
-  }
-  return tweaks;
+    NSMutableArray<NSNumber *> *tweaks = %orig;
+    if (tweaks && ![tweaks containsObject:@(YTGestureSection)]) {
+        [tweaks addObject:@(YTGestureSection)];
+    }
+    return tweaks;
 }
-
 %end
 
-        %hook YTAppSettingsPresentationData
+%hook YTAppSettingsPresentationData
++ (NSArray<NSNumber *> *)settingsCategoryOrder {
+    NSArray<NSNumber *> *order = %orig;
+    NSUInteger insertIndex = [order indexOfObject:@(1)];
 
-    + (NSArray<NSNumber *> *)settingsCategoryOrder {
-  NSArray<NSNumber *> *order = %orig;
-  NSUInteger insertIndex = [order indexOfObject:@(1)];
-
-  if (insertIndex != NSNotFound) {
-    NSMutableArray<NSNumber *> *mutableOrder = [order mutableCopy];
-    [mutableOrder insertObject:@(TweakSection) atIndex:insertIndex + 1];
-    return mutableOrder.copy;
-  }
-
-  return order ?: %orig;
+    if (insertIndex != NSNotFound) {
+        NSMutableArray<NSNumber *> *mutableOrder = [order mutableCopy];
+        [mutableOrder insertObject:@(YTGestureSection) atIndex:insertIndex + 1];
+        return mutableOrder.copy;
+    }
+    return order ?: %orig;
 }
-
 %end
 
 %hook YTSettingsSectionItemManager
 %new(v@:@)
-- (void)updateVolumeBoostYTSectionWithEntry:(id)entry {
+- (void)updateYTGesturesSectionWithEntry:(id)entry {
     NSMutableArray<YTSettingsSectionItem *> *sectionItems = [NSMutableArray array];
     Class YTSettingsSectionItemClass = %c(YTSettingsSectionItem);
     if (!YTSettingsSectionItemClass) return;
@@ -211,67 +200,51 @@ static CGPoint initialTouchPoint;
     YTSettingsViewController *settingsViewController = [self valueForKey:@"_settingsViewControllerDelegate"];
 
     YTSettingsSectionItem *enableTweak = [YTSettingsSectionItemClass
-          switchItemWithTitle:@"Enable System Volume Gesture"
+          switchItemWithTitle:@"Enable YTGestures"
              titleDescription:@"Allow custom right-edge pan volume gesture"
       accessibilityIdentifier:nil
-                     switchOn:IsVolumeBoostYTEnabled()
+                     switchOn:IsYTGesturesEnabled()
                   switchBlock:^BOOL(YTSettingsCell *cell, BOOL enabled) {
-                    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kVolumeBoostYTEnabledKey];
+                    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kYTGesturesEnabledKey];
                     [[NSUserDefaults standardUserDefaults] synchronize];
-
-                    // If user disables it, we don't need to reset anything 
-                    // because we are just controlling the hardware volume now.
                     return YES;
                   }
                 settingItemId:0];
     [sectionItems addObject:enableTweak];
 
-  if ([settingsViewController
-          respondsToSelector:@selector
-          (setSectionItems:
-               forCategory:title:icon:titleDescription:headerHidden:)]) {
-    [settingsViewController setSectionItems:sectionItems
-                                forCategory:TweakSection
-                                      title:@"VolumeBoostYT"
-                                       icon:nil
-                           titleDescription:nil
-                               headerHidden:NO];
-  } else if ([settingsViewController
-                 respondsToSelector:@selector
-                 (setSectionItems:
-                      forCategory:title:titleDescription:headerHidden:)]) {
-    [settingsViewController setSectionItems:sectionItems
-                                forCategory:TweakSection
-                                      title:@"VolumeBoostYT"
-                           titleDescription:nil
-                               headerHidden:NO];
-  }
+    if ([settingsViewController respondsToSelector:@selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)]) {
+        [settingsViewController setSectionItems:sectionItems
+                                    forCategory:YTGestureSection
+                                          title:@"YTGestures"
+                                           icon:nil
+                               titleDescription:nil
+                                   headerHidden:NO];
+    } else if ([settingsViewController respondsToSelector:@selector(setSectionItems:forCategory:title:titleDescription:headerHidden:)]) {
+        [settingsViewController setSectionItems:sectionItems
+                                    forCategory:YTGestureSection
+                                          title:@"YTGestures"
+                               titleDescription:nil
+                                   headerHidden:NO];
+    }
 }
 
 - (void)updateSectionForCategory:(NSUInteger)category withEntry:(id)entry {
-    if (category == TweakSection) {
-        [self updateVolumeBoostYTSectionWithEntry:entry];
+    if (category == YTGestureSection) {
+        [self updateYTGesturesSectionWithEntry:entry];
         return;
     }
     %orig;
 }
 %end
 
-    %end // end group YouTubeSettings
+%end // end group YouTubeSettings
 
-    %ctor {
-  // Never inject into SpringBoard (Home Screen)
-  NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
-  if ([bundleID isEqualToString:@"com.apple.springboard"]) {
-    return;
-  }
+%ctor {
+    NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
+    if ([bundleID isEqualToString:@"com.apple.springboard"]) return;
 
-  // Check if YouTube classes exist instead of relying on Bundle ID,
-  // because sideloaded apps (like LiveContainer) often change their Bundle IDs.
-  if (NSClassFromString(@"YTSettingsGroupData")) {
-    %init(YouTubeSettings);
-  }
-
-  // Always initialize the core AVPlayer and UIWindow touch hooks for every app
-  %init;
+    if (NSClassFromString(@"YTSettingsGroupData")) {
+        %init(YouTubeSettings);
+    }
+    %init;
 }
