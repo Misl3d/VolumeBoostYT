@@ -1,11 +1,13 @@
 name: Build Tweak
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:
+  workflow_dispatch: # This keeps the "Run workflow" button
+    inputs:
+      should_release:
+        description: 'Create a GitHub Release?'
+        required: true
+        type: boolean
+        default: true
 
 jobs:
   build:
