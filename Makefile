@@ -6,11 +6,11 @@ THEOS_PACKAGE_SCHEME = rootless
 
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME = VolumeBoostYT
+TWEAK_NAME = YTGestures
 
-VolumeBoostYT_FILES = Tweak.x YTVolumeHUD.m
-VolumeBoostYT_CFLAGS = -fobjc-arc
-VolumeBoostYT_FRAMEWORKS = UIKit MediaPlayer AVFoundation
-VolumeBoostYT_LOGOSFLAGS = -c generator=internal
+YTGestures_FILES = Tweak.x YTVolumeHUD.m
+YTGestures_CFLAGS = -fobjc-arc
+YTGestures_FRAMEWORKS = UIKit MediaPlayer AVFoundation
+YTGestures_LOGOSFLAGS = -c generator=internal
 
 include $(THEOS_MAKE_PATH)/tweak.mk
