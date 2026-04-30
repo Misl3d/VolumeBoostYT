@@ -10,7 +10,7 @@ TWEAK_NAME = VolumeBoostYT
 
 VolumeBoostYT_FILES = Tweak.x YTVolumeHUD.m
 VolumeBoostYT_CFLAGS = -fobjc-arc
-VolumeBoostYT_FRAMEWORKS = UIKit AVFoundation AudioToolbox
+VolumeBoostYT_FRAMEWORKS = UIKit MediaPlayer AVFoundation
 VolumeBoostYT_LOGOSFLAGS = -c generator=internal
 
 include $(THEOS_MAKE_PATH)/tweak.mk
