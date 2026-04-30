@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build VolumeBoostYT
+    name: Build YTGestures
     runs-on: macos-latest
     permissions:
       contents: write
@@ -40,13 +40,18 @@ jobs:
         run: |
           mkdir -p output
           cp packages/*.deb output/
-          cp VolumeBoostYT.plist output/
           
-          # Move the compiled dylib into the output folder for easy sideload access
-          if [ -f .theos/obj/VolumeBoostYT.dylib ]; then
-            cp .theos/obj/VolumeBoostYT.dylib output/
-          elif [ -f .theos/obj/debug/VolumeBoostYT.dylib ]; then
-            cp .theos/obj/debug/VolumeBoostYT.dylib output/
+          # Use wildcards to find the plist and dylib regardless of case or minor name changes
+          cp *.plist output/ 2>/dev/null || true
+          
+          # Find the dylib in the build folder - look for YTGestures.dylib
+          if [ -f .theos/obj/YTGestures.dylib ]; then
+            cp .theos/obj/YTGestures.dylib output/
+          elif [ -f .theos/obj/debug/YTGestures.dylib ]; then
+            cp .theos/obj/debug/YTGestures.dylib output/
+          elif [ -d .theos/obj ]; then
+             # Fallback: catch any dylib generated if the name differs slightly
+             find .theos/obj -name "*.dylib" -exec cp {} output/ \;
           fi
 
       - name: Generate Release Tag
@@ -60,7 +65,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          name: VolumeBoostYT ${{ steps.tag.outputs.version }}
+          name: YTGestures ${{ steps.tag.outputs.version }}
           files: output/*
           make_latest: true
           fail_on_unmatched_files: false
